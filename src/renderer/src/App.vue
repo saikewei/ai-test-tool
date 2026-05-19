@@ -6,6 +6,8 @@ import Step2Review from './components/Step2Review.vue'
 import Step3Generate from './components/Step3Generate.vue'
 import type { Requirement } from './types'
 
+const isMac = navigator.platform.toLowerCase().includes('mac')
+
 // 全局步骤状态
 const currentStep = ref(1)
 
@@ -36,20 +38,30 @@ const handleReviewComplete = (finalData: Requirement[]): void => {
 
 <template>
   <div class="flex flex-col h-screen w-full">
-    <!-- Navbar (Global) -->
-    <header class="h-12 border-b border-zinc-800 bg-zinc-950 flex items-center px-4 shrink-0">
-      <div class="flex items-center gap-2 text-zinc-300 font-medium">
+    <!-- Navbar (Global) — draggable title bar -->
+    <header
+      class="h-9 border-b border-zinc-800 bg-zinc-950 flex items-center px-4 shrink-0"
+      :class="{ 'pl-[90px]': isMac }"
+      style="-webkit-app-region: drag"
+    >
+      <div
+        class="flex items-center gap-2 text-zinc-300 font-medium"
+        style="-webkit-app-region: no-drag"
+      >
         <Terminal class="w-5 h-5 text-blue-500" />
         <span>AI Copilot <span class="text-zinc-600 font-normal">for Testing</span></span>
       </div>
-      <div class="ml-auto text-xs text-zinc-500 font-mono">v1.0.0-beta</div>
+      <div class="ml-auto text-xs text-zinc-500 font-mono" style="-webkit-app-region: no-drag">
+        v1.0.0-beta
+      </div>
     </header>
 
     <!-- Global Stepper -->
     <div
       class="h-14 border-b border-zinc-900 bg-zinc-950/50 flex items-center justify-center px-6 shrink-0"
+      style="-webkit-app-region: drag"
     >
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-4" style="-webkit-app-region: no-drag">
         <template v-for="(step, index) in steps" :key="step.id">
           <div
             class="flex items-center gap-2"
