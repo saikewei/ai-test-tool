@@ -1,60 +1,81 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Terminal, CheckCircle2, FileText, ChevronRight } from 'lucide-vue-next'
+import Step1Ingest from './components/Step1Ingest.vue'
+import Step2Review from './components/Step2Review.vue'
 
-// 测试 Vue 的响应式状态
-const count = ref(0)
-const increment = (): void => {
-  count.value++
-  window.api.ping()
+// 全局步骤状态
+const currentStep = ref(1)
+
+const steps = [
+  { id: 1, name: 'Ingest', icon: FileText },
+  { id: 2, name: 'Review & Edit', icon: Terminal },
+  { id: 3, name: 'Generate', icon: CheckCircle2 }
+]
+
+// 模拟的 AI 解析结果状态，从 Step 1 传递给 Step 2
+const aiParsedData = ref<any>(null)
+
+// 步骤一完成回调
+const handleAnalysisComplete = (data: any) => {
+  aiParsedData.value = data
+  currentStep.value = 2
+}
+
+// 步骤二完成回调
+const handleReviewComplete = (finalData: any) => {
+  console.log('最终提交给后端的数据:', finalData)
+  // TODO: 调用后端生成测试用例的 API
+  currentStep.value = 3
 }
 </script>
 
 <template>
-  <div
-    class="h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-50 font-sans antialiased selection:bg-cyan-500/30"
-  >
-    <div
-      class="max-w-md w-full p-8 rounded-3xl bg-zinc-900 border border-zinc-800 shadow-2xl shadow-black/50 flex flex-col items-center text-center"
-    >
-      <div
-        class="size-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center mb-6 shadow-lg shadow-cyan-500/20"
-      >
-        <svg class="size-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 10V3L4 14h7v7l9-11h-7z"
-          />
-        </svg>
+  <div class="flex flex-col h-screen w-full">
+    <!-- Navbar (Global) -->
+    <header class="h-12 border-b border-zinc-800 bg-zinc-950 flex items-center px-4 shrink-0">
+      <div class="flex items-center gap-2 text-zinc-300 font-medium">
+        <Terminal class="w-5 h-5 text-blue-500" />
+        <span>AI Copilot <span class="text-zinc-600 font-normal">for Testing</span></span>
       </div>
+      <div class="ml-auto text-xs text-zinc-500 font-mono">v1.0.0-beta</div>
+    </header>
 
-      <h1 class="text-3xl font-bold tracking-tight mb-2">
-        Tailwind
-        <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500"
-          >v4</span
-        >
-        Ready
-      </h1>
-
-      <p class="text-zinc-400 text-sm mb-8 leading-relaxed">
-        你的 Electron + Vue 3 + TypeScript 环境已经成功接入了下一代 Tailwind
-        CSS。享受极致的编译速度和零配置开发体验吧！
-      </p>
-
-      <button
-        class="w-full py-3 px-4 bg-zinc-100 hover:bg-white text-zinc-900 font-semibold rounded-xl transition-all active:scale-95 flex items-center justify-center gap-3 cursor-pointer"
-        @click="increment"
-      >
-        <span>点击测试 Vue 状态响应：</span>
-        <span class="bg-zinc-300 px-2 py-0.5 rounded-md font-mono text-sm text-zinc-800">
-          {{ count }}
-        </span>
-      </button>
+    <!-- Global Stepper -->
+    <div
+      class="h-14 border-b border-zinc-900 bg-zinc-950/50 flex items-center justify-center px-6 shrink-0"
+    >
+      <div class="flex items-center gap-4">
+        <template v-for="(step, index) in steps" :key="step.id">
+          <div
+            class="flex items-center gap-2"
+            :class="currentStep >= step.id ? 'text-blue-400' : 'text-zinc-600'"
+          >
+            <component :is="step.icon" class="w-4 h-4" />
+            <span class="text-sm font-medium tracking-wide">{{ step.name }}</span>
+          </div>
+          <ChevronRight v-if="index < steps.length - 1" class="w-4 h-4 text-zinc-700" />
+        </template>
+      </div>
     </div>
+
+    <!-- Main Workspace (Dynamic View) -->
+    <main class="flex-1 overflow-hidden relative">
+      <Step1Ingest v-if="currentStep === 1" @analyze="handleAnalysisComplete" />
+      <Step2Review
+        v-if="currentStep === 2"
+        :initial-data="aiParsedData"
+        @confirm="handleReviewComplete"
+      />
+
+      <!-- Placeholder for Step 3 -->
+      <div v-if="currentStep === 3" class="h-full flex items-center justify-center text-zinc-500">
+        <div class="text-center">
+          <CheckCircle2 class="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 class="text-xl text-zinc-300">Test Cases Generated</h2>
+          <p class="mt-2 text-sm">Export to your TMS or CI/CD pipeline.</p>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
-
-<style>
-/* 在 Tailwind v4 中，通常不需要写自定义 CSS，但如果你需要全局覆盖，可以写在这里 */
-</style>

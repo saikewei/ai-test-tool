@@ -12,5 +12,9 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
   },
   "editor.defaultFormatter": null,
-  "editor.tabSize": 2
+  "editor.tabSize": 2,
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
 }
