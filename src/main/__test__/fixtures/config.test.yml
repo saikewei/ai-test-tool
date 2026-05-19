@@ -1,0 +1,5 @@
+llm:
+  apiKey: 'test-api-key'
+  model: 'test-model'
+  baseURL: 'https://test.api.example.com'
+  reasoningEffort: 'low'
