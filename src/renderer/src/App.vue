@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Terminal, CheckCircle2, FileText, ChevronRight } from 'lucide-vue-next'
 import Step1Ingest from './components/Step1Ingest.vue'
 import Step2Review from './components/Step2Review.vue'
+import type { Requirement } from './types'
 
 // 全局步骤状态
 const currentStep = ref(1)
@@ -13,18 +14,18 @@ const steps = [
   { id: 3, name: 'Generate', icon: CheckCircle2 }
 ]
 
-// 模拟的 AI 解析结果状态，从 Step 1 传递给 Step 2
-const aiParsedData = ref<any>(null)
+// 从 Step 1 传递到 Step 2 的需求数组
+const requirementsList = ref<Requirement[]>([])
 
 // 步骤一完成回调
-const handleAnalysisComplete = (data: any) => {
-  aiParsedData.value = data
+const handleAnalysisComplete = (data: Requirement[]): void => {
+  requirementsList.value = data
   currentStep.value = 2
 }
 
 // 步骤二完成回调
-const handleReviewComplete = (finalData: any) => {
-  console.log('最终提交给后端的数据:', finalData)
+const handleReviewComplete = (finalData: Requirement[]): void => {
+  console.log('Final reviewed requirements:', finalData)
   // TODO: 调用后端生成测试用例的 API
   currentStep.value = 3
 }
@@ -64,7 +65,7 @@ const handleReviewComplete = (finalData: any) => {
       <Step1Ingest v-if="currentStep === 1" @analyze="handleAnalysisComplete" />
       <Step2Review
         v-if="currentStep === 2"
-        :initial-data="aiParsedData"
+        :requirements="requirementsList"
         @confirm="handleReviewComplete"
       />
 

@@ -5,6 +5,11 @@ declare global {
     electron: ElectronAPI
     api: {
       ping: () => Promise<void>
+      requestLlm: (
+        userPrompt: string,
+        systemPrompt?: string,
+        returnJson?: boolean
+      ) => Promise<string>
     }
   }
 }

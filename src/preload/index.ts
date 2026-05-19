@@ -3,7 +3,9 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  ping: (): Promise<void> => ipcRenderer.invoke('ping')
+  ping: (): Promise<void> => ipcRenderer.invoke('ping'),
+  requestLlm: (userPrompt: string, systemPrompt?: string, returnJson?: boolean): Promise<string> =>
+    ipcRenderer.invoke('request-llm', userPrompt, systemPrompt, returnJson)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

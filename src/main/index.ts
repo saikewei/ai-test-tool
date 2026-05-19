@@ -54,8 +54,15 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
+  // IPC
   ipcMain.handle('ping', () => console.log('pong'))
+  ipcMain.handle(
+    'request-llm',
+    async (_, userPrompt: string, systemPrompt?: string, returnJson?: boolean) => {
+      const { requestLlm } = await import('./llm')
+      return await requestLlm(userPrompt, systemPrompt, returnJson)
+    }
+  )
 
   createWindow()
 
