@@ -1,5 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
+import { writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { loadConfig } from './config'
 import icon from '../../resources/icon.png?asset'
@@ -63,6 +64,16 @@ app.whenReady().then(async () => {
       return await requestLlm(userPrompt, systemPrompt, returnJson)
     }
   )
+
+  ipcMain.handle('save-file', async (_, content: string, defaultName: string) => {
+    const result = await dialog.showSaveDialog({
+      defaultPath: defaultName,
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    })
+    if (result.canceled || !result.filePath) return false
+    await writeFile(result.filePath, content, 'utf-8')
+    return true
+  })
 
   createWindow()
 

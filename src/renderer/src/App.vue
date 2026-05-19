@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Terminal, CheckCircle2, FileText, ChevronRight } from 'lucide-vue-next'
 import Step1Ingest from './components/Step1Ingest.vue'
 import Step2Review from './components/Step2Review.vue'
+import Step3Generate from './components/Step3Generate.vue'
 import type { Requirement } from './types'
 
 // 全局步骤状态
@@ -17,6 +18,9 @@ const steps = [
 // 从 Step 1 传递到 Step 2 的需求数组
 const requirementsList = ref<Requirement[]>([])
 
+// Step 2 审核后的需求（传递给 Step 3）
+const reviewedRequirements = ref<Requirement[]>([])
+
 // 步骤一完成回调
 const handleAnalysisComplete = (data: Requirement[]): void => {
   requirementsList.value = data
@@ -25,8 +29,7 @@ const handleAnalysisComplete = (data: Requirement[]): void => {
 
 // 步骤二完成回调
 const handleReviewComplete = (finalData: Requirement[]): void => {
-  console.log('Final reviewed requirements:', finalData)
-  // TODO: 调用后端生成测试用例的 API
+  reviewedRequirements.value = finalData
   currentStep.value = 3
 }
 </script>
@@ -69,14 +72,7 @@ const handleReviewComplete = (finalData: Requirement[]): void => {
         @confirm="handleReviewComplete"
       />
 
-      <!-- Placeholder for Step 3 -->
-      <div v-if="currentStep === 3" class="h-full flex items-center justify-center text-zinc-500">
-        <div class="text-center">
-          <CheckCircle2 class="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 class="text-xl text-zinc-300">Test Cases Generated</h2>
-          <p class="mt-2 text-sm">Export to your TMS or CI/CD pipeline.</p>
-        </div>
-      </div>
+      <Step3Generate v-if="currentStep === 3" :requirements="reviewedRequirements" />
     </main>
   </div>
 </template>

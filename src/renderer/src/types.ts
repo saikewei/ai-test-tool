@@ -121,3 +121,75 @@ export function validateRequirements(raw: unknown): ValidationResult {
 
   return { valid: true, data: raw as Requirement[] }
 }
+
+// ---- 测试用例类型 ----
+
+export interface TestStep {
+  step_id: number
+  action: string
+  expected_result: string
+}
+
+export interface TestCase {
+  case_id: string
+  title: string
+  priority: 'High' | 'Medium' | 'Low'
+  risk_assessment: {
+    score: number
+    reason: string
+  }
+  preconditions: string
+  test_type: string
+  steps: TestStep[]
+}
+
+export interface TestSuite {
+  suite_name: string
+  description: string
+  test_cases: TestCase[]
+}
+
+export interface GeneratedTestSuite {
+  test_suite: TestSuite
+}
+
+export function validateTestSuite(raw: unknown): ValidationResult {
+  const data = raw as Record<string, unknown>
+
+  if (!data || typeof data !== 'object') {
+    return { valid: false, error: 'Response is not an object' }
+  }
+
+  const suite = data.test_suite as Record<string, unknown> | undefined
+  if (!suite || typeof suite !== 'object') {
+    return { valid: false, error: 'Missing "test_suite" object' }
+  }
+  if (typeof suite.suite_name !== 'string' || !suite.suite_name) {
+    return { valid: false, error: 'Missing or invalid "test_suite.suite_name"' }
+  }
+  if (!Array.isArray(suite.test_cases)) {
+    return { valid: false, error: '"test_suite.test_cases" must be an array' }
+  }
+
+  for (let i = 0; i < suite.test_cases.length; i++) {
+    const tc = suite.test_cases[i] as Record<string, unknown>
+    const label = `test_cases[${i}]`
+    if (typeof tc.case_id !== 'string' || !tc.case_id) {
+      return { valid: false, error: `${label}: missing or invalid "case_id"` }
+    }
+    if (typeof tc.title !== 'string' || !tc.title) {
+      return { valid: false, error: `${label}: missing or invalid "title"` }
+    }
+    if (!Array.isArray(tc.steps)) {
+      return { valid: false, error: `${label}: "steps" must be an array` }
+    }
+    for (let j = 0; j < tc.steps.length; j++) {
+      const s = tc.steps[j] as Record<string, unknown>
+      if (typeof s.step_id !== 'number' || typeof s.action !== 'string' || typeof s.expected_result !== 'string') {
+        return { valid: false, error: `${label}: steps[${j}]: missing required fields` }
+      }
+    }
+  }
+
+  return { valid: true, data: undefined }
+}

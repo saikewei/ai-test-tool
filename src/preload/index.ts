@@ -5,7 +5,9 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   ping: (): Promise<void> => ipcRenderer.invoke('ping'),
   requestLlm: (userPrompt: string, systemPrompt?: string, returnJson?: boolean): Promise<string> =>
-    ipcRenderer.invoke('request-llm', userPrompt, systemPrompt, returnJson)
+    ipcRenderer.invoke('request-llm', userPrompt, systemPrompt, returnJson),
+  saveFile: (content: string, defaultName: string): Promise<boolean> =>
+    ipcRenderer.invoke('save-file', content, defaultName)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

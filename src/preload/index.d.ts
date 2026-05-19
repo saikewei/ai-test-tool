@@ -10,6 +10,7 @@ declare global {
         systemPrompt?: string,
         returnJson?: boolean
       ) => Promise<string>
+      saveFile: (content: string, defaultName: string) => Promise<boolean>
     }
   }
 }
