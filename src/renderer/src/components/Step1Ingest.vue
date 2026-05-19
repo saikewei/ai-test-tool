@@ -16,20 +16,27 @@ const handleAnalyze = () => {
     isAnalyzing.value = false
     // 模拟后端返回的数据结构
     const mockAiResponse = {
-      originalText: prdText.value,
-      risk: { score: 8.5, priority: 'High' },
-      coverageItems: [
-        { id: 'COV-001', field: 'user_age', type: 'int', valid: '18-65', invalid: '<18, >65' },
+      requirement_id: 'R4.1',
+      original_text: prdText.value, // 用于左侧只读区渲染
+      risk_assessment: {
+        score: 8,
+        priority: 'High'
+      },
+      coverage_items: [
         {
-          id: 'COV-002',
-          field: 'transaction_amt',
-          type: 'float',
-          valid: '0.01-10000.00',
-          invalid: '<=0, >10000'
+          id: 'C_001',
+          name: 'total_item_price',
+          valid_range: '>= 39.00',
+          expected_action: 'delivery_fee = 0'
         }
       ],
-      strategies: [
-        { id: 'ST-001', coverageId: 'COV-001', method: 'BVA', points: ['17', '18', '65', '66'] }
+      test_strategies: [
+        {
+          id: 'S_001',
+          target_item_id: 'C_001',
+          method: 'Boundary Value Analysis (BVA)',
+          proposed_test_points: ['38.99', '39.00', '39.01']
+        }
       ]
     }
     emit('analyze', mockAiResponse)
