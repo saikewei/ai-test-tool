@@ -24,8 +24,6 @@ onConfigChange((newConfig) => {
 async function ensureClient(): Promise<void> {
   if (!openai) {
     await getConfig()
-    // onConfigChange already fired synchronously during loadConfig,
-    // so openai is now set. If not (listener threw?), build explicitly.
     if (!openai) {
       const { getConfigSync } = await import('./config')
       buildClient(getConfigSync())
@@ -47,9 +45,9 @@ async function requestLlm(
     ],
     model: model as string,
     thinking: { type: 'enabled' },
-    // @ts-ignore openai typings are outdated and don't include max reasoningEffort
+    // @ts-expect-error 'max' not in upstream ReasoningEffort union
     reasoning_effort: reasoningEffort,
-    response_format: returnJson ? { type: 'json_object' } : undefined,
+    response_format: returnJson ? { type: 'json_object' as const } : undefined,
     stream: false
   })
 

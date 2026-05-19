@@ -143,6 +143,24 @@ const handleAnalyze = async (): Promise<void> => {
       ></textarea>
     </div>
 
+    <!-- Loading Dialog -->
+    <Teleport to="body">
+      <div
+        v-if="isAnalyzing"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      >
+        <div
+          class="bg-zinc-900 border border-zinc-800 rounded-xl px-8 py-6 flex flex-col items-center gap-4 shadow-2xl"
+        >
+          <Loader2 class="w-8 h-8 text-blue-400 animate-spin" />
+          <div class="text-center">
+            <p class="text-sm font-medium text-zinc-200">Analyzing Requirements</p>
+            <p class="text-xs text-zinc-500 mt-1">AI is parsing and assessing your input...</p>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Dropzone -->
     <div
       class="h-32 border-2 border-dashed border-zinc-800 rounded-lg bg-zinc-900/50 flex flex-col items-center justify-center text-zinc-500 hover:border-zinc-700 hover:bg-zinc-900 transition-colors cursor-pointer group"
