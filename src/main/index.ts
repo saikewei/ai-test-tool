@@ -6,6 +6,8 @@ import { loadConfig, getConfigSync, reloadConfig, saveConfig } from './config'
 import type { LlmConfig } from './config'
 import icon from '../../resources/icon.png?asset'
 
+app.commandLine.appendSwitch('disable-gpu-sandbox')
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -79,10 +81,12 @@ app.whenReady().then(async () => {
             'Config file not found. Please open Settings (gear icon) to configure your LLM connection.'
           )
         }
-        if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('Incorrect API key')) {
-          throw new Error(
-            'Authentication failed. Please check your API Key in Settings.'
-          )
+        if (
+          msg.includes('401') ||
+          msg.includes('Unauthorized') ||
+          msg.includes('Incorrect API key')
+        ) {
+          throw new Error('Authentication failed. Please check your API Key in Settings.')
         }
         if (
           msg.includes('ECONNREFUSED') ||
@@ -90,9 +94,7 @@ app.whenReady().then(async () => {
           msg.includes('fetch failed') ||
           msg.includes('getaddrinfo')
         ) {
-          throw new Error(
-            'Cannot reach the LLM service. Please check your Base URL in Settings.'
-          )
+          throw new Error('Cannot reach the LLM service. Please check your Base URL in Settings.')
         }
         throw err
       }
