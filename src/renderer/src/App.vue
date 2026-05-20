@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Terminal, CheckCircle2, FileText, ChevronRight } from 'lucide-vue-next'
+import { Terminal, CheckCircle2, FileText, ChevronRight, House } from 'lucide-vue-next'
 import Step1Ingest from './components/Step1Ingest.vue'
 import Step2Review from './components/Step2Review.vue'
 import Step3Generate from './components/Step3Generate.vue'
@@ -34,6 +34,12 @@ const handleReviewComplete = (finalData: Requirement[]): void => {
   reviewedRequirements.value = finalData
   currentStep.value = 3
 }
+
+const resetAll = (): void => {
+  currentStep.value = 1
+  requirementsList.value = []
+  reviewedRequirements.value = []
+}
 </script>
 
 <template>
@@ -51,8 +57,17 @@ const handleReviewComplete = (finalData: Requirement[]): void => {
         <Terminal class="w-5 h-5 text-blue-500" />
         <span>AI Copilot <span class="text-zinc-600 font-normal">for Testing</span></span>
       </div>
-      <div class="ml-auto text-xs text-zinc-500 font-mono" style="-webkit-app-region: no-drag">
-        v1.0.0-beta
+      <div class="ml-auto flex items-center gap-3" style="-webkit-app-region: no-drag">
+        <button
+          v-if="currentStep > 1"
+          class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          title="Back to start"
+          @click="resetAll"
+        >
+          <House class="w-3.5 h-3.5" />
+          Home
+        </button>
+        <span class="text-xs text-zinc-500 font-mono">v1.0.0-beta</span>
       </div>
     </header>
 
