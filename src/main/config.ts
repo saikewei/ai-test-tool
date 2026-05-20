@@ -20,6 +20,13 @@ let _config: AppConfig | null = null
 let _configPath: string | null = null
 const _listeners = new Set<ConfigChangeListener>()
 
+function defaultConfigPath(): string {
+  if (app.isPackaged) {
+    return path.join(app.getPath('userData'), 'config.yaml')
+  }
+  return path.join(app.getAppPath(), 'config.yaml')
+}
+
 function notify(newConfig: AppConfig): void {
   for (const fn of _listeners) {
     try {
@@ -31,7 +38,7 @@ function notify(newConfig: AppConfig): void {
 }
 
 export async function loadConfig(customPath?: string): Promise<AppConfig> {
-  _configPath = customPath || path.join(app.getAppPath(), 'config.yaml')
+  _configPath = customPath || defaultConfigPath()
   const raw = await fs.readFile(_configPath, 'utf8')
   const newConfig = yaml.load(raw) as AppConfig
   const changed = !_config || JSON.stringify(newConfig) !== JSON.stringify(_config)
@@ -70,7 +77,7 @@ export function onConfigChange(listener: ConfigChangeListener): () => void {
 }
 
 export async function saveConfig(config: AppConfig): Promise<void> {
-  _configPath = _configPath || path.join(app.getAppPath(), 'config.yaml')
+  _configPath = _configPath || defaultConfigPath()
   const dir = path.dirname(_configPath)
   await fs.mkdir(dir, { recursive: true })
   const yamlStr = yaml.dump(config)
