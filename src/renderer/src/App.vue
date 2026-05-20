@@ -49,7 +49,7 @@ const resetAll = (): void => {
     <!-- Navbar (Global) — draggable title bar -->
     <header
       class="h-9 border-b border-zinc-800 bg-zinc-950 flex items-center px-4 shrink-0"
-      :class="{ 'pl-[90px]': isMac }"
+      :class="isMac ? 'pl-[90px]' : 'pr-[140px]'"
       style="-webkit-app-region: drag"
     >
       <div
