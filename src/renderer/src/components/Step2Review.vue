@@ -291,18 +291,21 @@ const priorityBadgeClass = (p: string): string => {
                     <td class="px-4 py-2">
                       <input
                         v-model="item.name"
+                        spellcheck="false"
                         class="w-full bg-transparent border border-transparent hover:border-zinc-700 focus:border-blue-500 focus:bg-zinc-900 rounded px-2 py-1 outline-none transition-all"
                       />
                     </td>
                     <td class="px-4 py-2">
                       <input
                         v-model="item.valid_range"
+                        spellcheck="false"
                         class="w-full bg-transparent border border-transparent hover:border-zinc-700 focus:border-blue-500 focus:bg-zinc-900 rounded px-2 py-1 outline-none"
                       />
                     </td>
                     <td class="px-4 py-2">
                       <input
                         v-model="item.expected_action"
+                        spellcheck="false"
                         class="w-full bg-transparent border border-transparent hover:border-zinc-700 focus:border-blue-500 focus:bg-zinc-900 rounded px-2 py-1 outline-none"
                       />
                     </td>
@@ -387,6 +390,7 @@ const priorityBadgeClass = (p: string): string => {
                       </span>
                       <input
                         v-model="strategy._tagInput"
+                        spellcheck="false"
                         class="flex-1 min-w-[60px] bg-transparent outline-none text-xs font-mono text-zinc-300 placeholder:text-zinc-700"
                         placeholder="Add point..."
                         @keydown.enter.prevent="handleTagKeydown(strategy)"
