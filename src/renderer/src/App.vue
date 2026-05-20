@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Terminal, CheckCircle2, FileText, ChevronRight, House } from 'lucide-vue-next'
+import { Terminal, CheckCircle2, FileText, ChevronRight, House, Settings } from 'lucide-vue-next'
 import Step1Ingest from './components/Step1Ingest.vue'
 import Step2Review from './components/Step2Review.vue'
 import Step3Generate from './components/Step3Generate.vue'
+import SettingsDialog from './components/SettingsDialog.vue'
 import type { Requirement } from './types'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
+const showSettings = ref(false)
 
 // 全局步骤状态
 const currentStep = ref(1)
@@ -59,6 +61,13 @@ const resetAll = (): void => {
       </div>
       <div class="ml-auto flex items-center gap-3" style="-webkit-app-region: no-drag">
         <button
+          class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          title="Settings"
+          @click="showSettings = true"
+        >
+          <Settings class="w-3.5 h-3.5" />
+        </button>
+        <button
           v-if="currentStep > 1"
           class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
           title="Back to start"
@@ -101,5 +110,7 @@ const resetAll = (): void => {
 
       <Step3Generate v-if="currentStep === 3" :requirements="reviewedRequirements" />
     </main>
+
+    <SettingsDialog v-if="showSettings" @close="showSettings = false" />
   </div>
 </template>

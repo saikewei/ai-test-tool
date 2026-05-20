@@ -2,7 +2,8 @@ import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { writeFile } from 'fs/promises'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { loadConfig } from './config'
+import { loadConfig, getConfigSync, reloadConfig, saveConfig } from './config'
+import type { LlmConfig } from './config'
 import icon from '../../resources/icon.png?asset'
 
 function createWindow(): void {
@@ -47,7 +48,11 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
-  await loadConfig()
+  try {
+    await loadConfig()
+  } catch {
+    console.warn('config.yaml not found or invalid — app will start without LLM config')
+  }
 
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
@@ -64,8 +69,33 @@ app.whenReady().then(async () => {
   ipcMain.handle(
     'request-llm',
     async (_, userPrompt: string, systemPrompt?: string, returnJson?: boolean) => {
-      const { requestLlm } = await import('./llm')
-      return await requestLlm(userPrompt, systemPrompt, returnJson)
+      try {
+        const { requestLlm } = await import('./llm')
+        return await requestLlm(userPrompt, systemPrompt, returnJson)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        if (msg.includes('ENOENT') || msg.includes('config')) {
+          throw new Error(
+            'Config file not found. Please open Settings (gear icon) to configure your LLM connection.'
+          )
+        }
+        if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('Incorrect API key')) {
+          throw new Error(
+            'Authentication failed. Please check your API Key in Settings.'
+          )
+        }
+        if (
+          msg.includes('ECONNREFUSED') ||
+          msg.includes('ENOTFOUND') ||
+          msg.includes('fetch failed') ||
+          msg.includes('getaddrinfo')
+        ) {
+          throw new Error(
+            'Cannot reach the LLM service. Please check your Base URL in Settings.'
+          )
+        }
+        throw err
+      }
     }
   )
 
@@ -77,6 +107,28 @@ app.whenReady().then(async () => {
     if (result.canceled || !result.filePath) return false
     await writeFile(result.filePath, content, 'utf-8')
     return true
+  })
+
+  ipcMain.handle('read-config', async () => {
+    try {
+      return getConfigSync()
+    } catch {
+      // config.yaml 不存在时返回 null
+      const { getConfig } = await import('./config')
+      try {
+        return await getConfig()
+      } catch {
+        return null
+      }
+    }
+  })
+
+  ipcMain.handle('write-config', async (_, data: LlmConfig) => {
+    await saveConfig({ llm: data })
+  })
+
+  ipcMain.handle('reload-config', async () => {
+    await reloadConfig()
   })
 
   createWindow()

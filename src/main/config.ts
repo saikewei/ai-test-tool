@@ -68,3 +68,14 @@ export function onConfigChange(listener: ConfigChangeListener): () => void {
     _listeners.delete(listener)
   }
 }
+
+export async function saveConfig(config: AppConfig): Promise<void> {
+  _configPath = _configPath || path.join(app.getAppPath(), 'config.yaml')
+  const dir = path.dirname(_configPath)
+  await fs.mkdir(dir, { recursive: true })
+  const yamlStr = yaml.dump(config)
+  await fs.writeFile(_configPath, yamlStr, 'utf8')
+  _config = config
+  notify(_config)
+  console.log('config saved:', _configPath)
+}

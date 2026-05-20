@@ -7,7 +7,17 @@ const api = {
   requestLlm: (userPrompt: string, systemPrompt?: string, returnJson?: boolean): Promise<string> =>
     ipcRenderer.invoke('request-llm', userPrompt, systemPrompt, returnJson),
   saveFile: (content: string, defaultName: string): Promise<boolean> =>
-    ipcRenderer.invoke('save-file', content, defaultName)
+    ipcRenderer.invoke('save-file', content, defaultName),
+  readConfig: (): Promise<{
+    llm: { apiKey: string; model: string; baseURL: string; reasoningEffort: string }
+  } | null> => ipcRenderer.invoke('read-config'),
+  writeConfig: (data: {
+    apiKey: string
+    model: string
+    baseURL: string
+    reasoningEffort: string
+  }): Promise<void> => ipcRenderer.invoke('write-config', data),
+  reloadConfig: (): Promise<void> => ipcRenderer.invoke('reload-config')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
