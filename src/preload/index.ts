@@ -8,6 +8,8 @@ const api = {
     ipcRenderer.invoke('request-llm', userPrompt, systemPrompt, returnJson),
   saveFile: (content: string, defaultName: string): Promise<boolean> =>
     ipcRenderer.invoke('save-file', content, defaultName),
+  modelStates: (requirementText: string): Promise<unknown> =>
+    ipcRenderer.invoke('model-states', requirementText),
   readConfig: (): Promise<{
     llm: { apiKey: string; model: string; baseURL: string; reasoningEffort: string }
   } | null> => ipcRenderer.invoke('read-config'),

@@ -112,7 +112,10 @@ app.whenReady().then(async () => {
     await writeFile(result.filePath, content, 'utf-8')
     return true
   })
-
+  ipcMain.handle('model-states', async (_, requirementText: string) => {
+    const { buildStateModel } = await import('./stateModel')
+    return await buildStateModel(requirementText)
+  })
   ipcMain.handle('read-config', async () => {
     try {
       return getConfigSync()
