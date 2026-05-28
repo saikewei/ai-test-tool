@@ -8,16 +8,20 @@ import {
   ChevronDown,
   ChevronRight,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  GitBranch
 } from 'lucide-vue-next'
 import { type Requirement, type GeneratedTestSuite, validateTestSuite } from '../types'
 
 const props = defineProps<{ requirements: Requirement[] }>()
 
+const emit = defineEmits<{
+  goStateModeling: []
+}>()
+
 const isGenerating = ref(false)
 const errorMessage = ref('')
 const testSuite = ref<GeneratedTestSuite | null>(null)
-// 使用普通对象而非 Set，保证 Vue 模板中响应式正确
 const expandedCases = ref<Record<string, boolean>>({})
 
 // ---- 系统提示词 ----
@@ -161,12 +165,25 @@ const priorityBadgeClass = (p: string): string => {
 <template>
   <div class="h-full w-full max-w-5xl mx-auto p-8 flex flex-col gap-4 min-h-0">
     <!-- 标题 -->
-    <div class="flex flex-col gap-1 shrink-0">
-      <h1 class="text-2xl font-semibold text-zinc-100">Generate Test Cases</h1>
-      <p class="text-zinc-500 text-sm">
-        AI will generate standardized test cases based on the
-        {{ requirements.length }} reviewed requirements.
-      </p>
+    <div class="flex items-start justify-between shrink-0">
+      <div class="flex flex-col gap-1">
+        <h1 class="text-2xl font-semibold text-zinc-100">Generate Test Cases</h1>
+        <p class="text-zinc-500 text-sm">
+          AI will generate standardized test cases based on the
+          {{ requirements.length }} reviewed requirements.
+        </p>
+      </div>
+
+      <!-- FR4.0 入口按钮 -->
+      <button
+        class="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-blue-500/50 text-zinc-300 hover:text-blue-400 px-4 py-2 rounded-lg text-sm font-medium transition-all group shrink-0"
+        title="White-Box State Transition Testing (FR4.0)"
+        @click="emit('goStateModeling')"
+      >
+        <GitBranch class="w-4 h-4 group-hover:text-blue-400 transition-colors" />
+        State Modeling
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono">FR4.0</span>
+      </button>
     </div>
 
     <!-- 初始状态 -->

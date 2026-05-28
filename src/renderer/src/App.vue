@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Terminal, CheckCircle2, FileText, ChevronRight, House, Settings } from 'lucide-vue-next'
+import { Terminal, CheckCircle2, FileText, ChevronRight, House, Settings, GitBranch } from 'lucide-vue-next'
 import Step1Ingest from './components/Step1Ingest.vue'
 import Step2Review from './components/Step2Review.vue'
 import Step3Generate from './components/Step3Generate.vue'
+import Step4StateModel from './components/Step4StateModel.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
 import type { Requirement } from './types'
 
@@ -16,13 +17,14 @@ const currentStep = ref(1)
 const steps = [
   { id: 1, name: 'Ingest', icon: FileText },
   { id: 2, name: 'Review & Edit', icon: Terminal },
-  { id: 3, name: 'Generate', icon: CheckCircle2 }
+  { id: 3, name: 'Generate', icon: CheckCircle2 },
+  { id: 4, name: 'State Modeling', icon: GitBranch }
 ]
 
 // 从 Step 1 传递到 Step 2 的需求数组
 const requirementsList = ref<Requirement[]>([])
 
-// Step 2 审核后的需求（传递给 Step 3）
+// Step 2 审核后的需求（传递给 Step 3 & Step 4）
 const reviewedRequirements = ref<Requirement[]>([])
 
 // 步骤一完成回调
@@ -35,6 +37,11 @@ const handleAnalysisComplete = (data: Requirement[]): void => {
 const handleReviewComplete = (finalData: Requirement[]): void => {
   reviewedRequirements.value = finalData
   currentStep.value = 3
+}
+
+// Step3 → Step4 跳转
+const goToStateModeling = (): void => {
+  currentStep.value = 4
 }
 
 const resetAll = (): void => {
@@ -107,8 +114,16 @@ const resetAll = (): void => {
         :requirements="requirementsList"
         @confirm="handleReviewComplete"
       />
-
-      <Step3Generate v-if="currentStep === 3" :requirements="reviewedRequirements" />
+      <Step3Generate
+        v-if="currentStep === 3"
+        :requirements="reviewedRequirements"
+        @go-state-modeling="goToStateModeling"
+      />
+      <Step4StateModel
+        v-if="currentStep === 4"
+        :requirements="reviewedRequirements"
+        @back="currentStep = 3"
+      />
     </main>
 
     <SettingsDialog v-if="showSettings" @close="showSettings = false" />
