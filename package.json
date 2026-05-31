@@ -1,9 +1,9 @@
 {
-  "name": "ai-test-tool",
+  "name": "testwise",
   "version": "1.0.0",
-  "description": "An Electron application with Vue and TypeScript",
+  "description": "AI-powered software testing assistant",
   "main": "./out/main/index.js",
-  "author": "example.com",
+  "author": "",
   "homepage": "https://electron-vite.org",
   "scripts": {
     "format": "prettier --write .",

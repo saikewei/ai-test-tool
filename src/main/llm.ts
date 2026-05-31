@@ -7,6 +7,7 @@ const SYSTEM_PROMPT = '你是一个软件测试专家，协助我分析和测试
 let openai: OpenAI | null = null
 let model: string | null = null
 let reasoningEffort: 'high' | 'max' | null = null
+let thinkingEnabled = true
 
 function buildClient(config: AppConfig): void {
   openai = new OpenAI({
@@ -15,6 +16,7 @@ function buildClient(config: AppConfig): void {
   })
   model = config.llm.model
   reasoningEffort = config.llm.reasoningEffort
+  thinkingEnabled = config.llm.thinkingEnabled ?? true
 }
 
 onConfigChange((newConfig) => {
@@ -38,15 +40,15 @@ async function requestLlm(
 ): Promise<string> {
   await ensureClient()
 
+  // @ts-expect-error reasoning_effort('max') + thinking not fully in upstream types
   const completion = await openai!.chat.completions.create({
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ],
     model: model as string,
-    thinking: { type: 'enabled' },
-    // @ts-expect-error 'max' not in upstream ReasoningEffort union
-    reasoning_effort: reasoningEffort,
+    thinking: { type: thinkingEnabled ? 'enabled' : 'disabled' },
+    ...(thinkingEnabled ? { reasoning_effort: reasoningEffort } : {}),
     response_format: returnJson ? { type: 'json_object' as const } : undefined,
     stream: false
   })

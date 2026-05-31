@@ -8,6 +8,7 @@ export interface LlmConfig {
   model: string
   baseURL: string
   reasoningEffort: 'high' | 'max'
+  thinkingEnabled: boolean
 }
 
 export interface AppConfig {

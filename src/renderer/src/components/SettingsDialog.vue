@@ -12,7 +12,8 @@ const form = reactive({
   apiKey: '',
   model: '',
   baseURL: '',
-  reasoningEffort: 'high' as string
+  reasoningEffort: 'high' as string,
+  thinkingEnabled: true
 })
 
 // 打开时读取当前配置
@@ -25,6 +26,7 @@ async function load(): Promise<void> {
       form.model = config.llm.model || ''
       form.baseURL = config.llm.baseURL || ''
       form.reasoningEffort = config.llm.reasoningEffort || 'high'
+      form.thinkingEnabled = config.llm.thinkingEnabled ?? true
     }
   } catch {
     // config 不存在时表单留空
@@ -43,7 +45,8 @@ async function handleSave(): Promise<void> {
       apiKey: form.apiKey,
       model: form.model,
       baseURL: form.baseURL,
-      reasoningEffort: form.reasoningEffort
+      reasoningEffort: form.reasoningEffort,
+      thinkingEnabled: form.thinkingEnabled
     })
     await window.api.reloadConfig()
     message.value = { type: 'success', text: 'Settings saved and reloaded.' }
@@ -61,11 +64,16 @@ async function handleSave(): Promise<void> {
 <template>
   <Teleport to="body">
     <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-xl w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl">
+      <div
+        class="bg-zinc-900 border border-zinc-800 rounded-xl w-[480px] max-h-[90vh] overflow-y-auto shadow-2xl"
+      >
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-800">
           <h2 class="text-sm font-semibold text-zinc-200">Settings</h2>
-          <button class="text-zinc-500 hover:text-zinc-300 transition-colors" @click="emit('close')">
+          <button
+            class="text-zinc-500 hover:text-zinc-300 transition-colors"
+            @click="emit('close')"
+          >
             <X class="w-4 h-4" />
           </button>
         </div>
@@ -110,14 +118,36 @@ async function handleSave(): Promise<void> {
 
           <!-- reasoningEffort -->
           <div>
-            <label class="block text-xs text-zinc-500 mb-1">Reasoning Effort</label>
+            <label
+              class="block text-xs mb-1"
+              :class="form.thinkingEnabled ? 'text-zinc-500' : 'text-zinc-700'"
+              >Reasoning Effort</label
+            >
             <select
               v-model="form.reasoningEffort"
-              class="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-300 outline-none focus:border-blue-500 cursor-pointer"
+              :disabled="!form.thinkingEnabled"
+              class="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm outline-none focus:border-blue-500 cursor-pointer transition-colors"
+              :class="form.thinkingEnabled ? 'text-zinc-300' : 'text-zinc-700 cursor-not-allowed'"
             >
               <option value="high" class="bg-zinc-800">high</option>
               <option value="max" class="bg-zinc-800">max</option>
             </select>
+          </div>
+
+          <!-- thinkingEnabled -->
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-zinc-500">Thinking Mode</label>
+            <button
+              type="button"
+              class="relative w-10 h-5 rounded-full transition-colors"
+              :class="form.thinkingEnabled ? 'bg-blue-600' : 'bg-zinc-700'"
+              @click="form.thinkingEnabled = !form.thinkingEnabled"
+            >
+              <span
+                class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform"
+                :class="form.thinkingEnabled ? 'translate-x-5' : 'translate-x-0'"
+              ></span>
+            </button>
           </div>
 
           <!-- Message -->
@@ -130,13 +160,19 @@ async function handleSave(): Promise<void> {
                 : 'bg-red-500/10 border border-red-500/20 text-red-400'
             "
           >
-            <component :is="message.type === 'success' ? CheckCircle2 : AlertCircle" class="w-3.5 h-3.5 shrink-0" />
+            <component
+              :is="message.type === 'success' ? CheckCircle2 : AlertCircle"
+              class="w-3.5 h-3.5 shrink-0"
+            />
             {{ message.text }}
           </div>
         </div>
 
         <!-- Footer -->
-        <div v-if="!isLoading" class="flex items-center justify-end gap-3 px-5 py-4 border-t border-zinc-800">
+        <div
+          v-if="!isLoading"
+          class="flex items-center justify-end gap-3 px-5 py-4 border-t border-zinc-800"
+        >
           <button
             class="px-4 py-2 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
             @click="emit('close')"

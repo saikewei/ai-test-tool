@@ -7,6 +7,7 @@ import type { LlmConfig } from './config'
 import icon from '../../resources/icon.png?asset'
 
 app.commandLine.appendSwitch('disable-gpu-sandbox')
+app.setName('TestWise')
 
 function createWindow(): void {
   // Create the browser window.
@@ -59,7 +60,7 @@ app.whenReady().then(async () => {
   }
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.testwise.app')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.

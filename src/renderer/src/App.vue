@@ -51,7 +51,7 @@ const resetAll = (): void => {
         style="-webkit-app-region: no-drag"
       >
         <Terminal class="w-5 h-5 text-blue-500" />
-        <span>AI Copilot <span class="text-zinc-600 font-normal">for Testing</span></span>
+        <span>TestWise</span>
       </div>
       <div class="ml-auto flex items-center gap-3" style="-webkit-app-region: no-drag">
         <button

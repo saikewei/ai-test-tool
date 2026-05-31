@@ -5,6 +5,7 @@ interface LlmConfigData {
   model: string
   baseURL: string
   reasoningEffort: string
+  thinkingEnabled: boolean
 }
 
 interface AppConfigData {
