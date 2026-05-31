@@ -7,17 +7,16 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
-  CheckCircle2,
   AlertCircle,
+  FolderTree,
   GitBranch
 } from 'lucide-vue-next'
 import { type Requirement, type GeneratedTestSuite, validateTestSuite } from '../types'
+import Step4StateModel from './Step4StateModel.vue'
 
 const props = defineProps<{ requirements: Requirement[] }>()
 
-const emit = defineEmits<{
-  goStateModeling: []
-}>()
+const activeTab = ref<'cases' | 'stateModel'>('cases')
 
 const isGenerating = ref(false)
 const errorMessage = ref('')
@@ -164,216 +163,239 @@ const priorityBadgeClass = (p: string): string => {
 
 <template>
   <div class="h-full w-full max-w-5xl mx-auto p-8 flex flex-col gap-4 min-h-0">
-    <!-- 标题 -->
-    <div class="flex items-start justify-between shrink-0">
-      <div class="flex flex-col gap-1">
-        <h1 class="text-2xl font-semibold text-zinc-100">Generate Test Cases</h1>
-        <p class="text-zinc-500 text-sm">
-          AI will generate standardized test cases based on the
-          {{ requirements.length }} reviewed requirements.
-        </p>
-      </div>
-
-      <!-- FR4.0 入口按钮 -->
-      <button
-        class="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-blue-500/50 text-zinc-300 hover:text-blue-400 px-4 py-2 rounded-lg text-sm font-medium transition-all group shrink-0"
-        title="White-Box State Transition Testing (FR4.0)"
-        @click="emit('goStateModeling')"
-      >
-        <GitBranch class="w-4 h-4 group-hover:text-blue-400 transition-colors" />
-        State Modeling
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono">FR4.0</span>
-      </button>
-    </div>
-
-    <!-- 初始状态 -->
-    <div
-      v-if="!testSuite && !isGenerating && requirements.length > 0"
-      class="flex-1 flex items-center justify-center"
-    >
-      <button
-        class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-medium text-sm flex items-center gap-2 transition-all shadow-lg shadow-blue-900/20"
-        @click="handleGenerate"
-      >
-        <Sparkles class="w-5 h-5" />
-        Generate Test Cases
-      </button>
-    </div>
-
-    <!-- Loading Dialog -->
-    <Teleport to="body">
-      <div
-        v-if="isGenerating"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      >
-        <div
-          class="bg-zinc-900 border border-zinc-800 rounded-xl px-8 py-6 flex flex-col items-center gap-4 shadow-2xl"
+    <!-- 标题 + Tab 栏 -->
+    <div class="flex items-center justify-between shrink-0">
+      <h1 class="text-2xl font-semibold text-zinc-100">Generate</h1>
+      <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
+        <button
+          class="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+          :class="
+            activeTab === 'cases'
+              ? 'bg-zinc-700 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          "
+          @click="activeTab = 'cases'"
         >
-          <Loader2 class="w-8 h-8 text-blue-400 animate-spin" />
-          <div class="text-center">
-            <p class="text-sm font-medium text-zinc-200">Generating Test Cases</p>
-            <p class="text-xs text-zinc-500 mt-1">
-              AI is creating test cases from your requirements...
-            </p>
-          </div>
-        </div>
+          <FolderTree class="w-4 h-4" />
+          Test Cases
+        </button>
+        <button
+          class="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+          :class="
+            activeTab === 'stateModel'
+              ? 'bg-zinc-700 text-zinc-200'
+              : 'text-zinc-500 hover:text-zinc-300'
+          "
+          @click="activeTab = 'stateModel'"
+        >
+          <GitBranch class="w-4 h-4" />
+          State Modeling
+        </button>
       </div>
-    </Teleport>
-
-    <!-- Error -->
-    <div
-      v-if="errorMessage"
-      class="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-md px-4 py-3 text-sm text-red-400 shrink-0"
-    >
-      <AlertCircle class="w-4 h-4 shrink-0" />
-      {{ errorMessage }}
     </div>
 
-    <!-- 结果展示 -->
-    <template v-if="testSuite">
-      <!-- Suite 概览 + 操作 -->
+    <!-- Tab: Test Cases -->
+    <template v-if="activeTab === 'cases'">
+      <!-- 初始状态 -->
       <div
-        class="flex items-center justify-between shrink-0 bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-3"
+        v-if="!testSuite && !isGenerating && requirements.length > 0"
+        class="flex-1 flex flex-col items-center justify-center gap-4 text-zinc-600"
       >
-        <div class="min-w-0">
-          <h2 class="text-base font-semibold text-zinc-100 truncate">
-            {{ testSuite.test_suite.suite_name }}
-          </h2>
-          <div class="flex items-center gap-3 mt-1 text-xs text-zinc-500">
-            <span>{{ totalCases }} cases</span>
-            <span class="flex items-center gap-1"
-              ><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span
-              >{{ priorityCounts.High }}</span
-            >
-            <span class="flex items-center gap-1"
-              ><span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span
-              >{{ priorityCounts.Medium }}</span
-            >
-            <span class="flex items-center gap-1"
-              ><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span
-              >{{ priorityCounts.Low }}</span
-            >
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
+        <FolderTree class="w-12 h-12 opacity-30" />
+        <div class="text-center">
+          <p class="text-sm font-medium text-zinc-400">Test cases not yet generated</p>
+          <p class="text-xs text-zinc-600 mt-1 mb-4">
+            Generate functional test cases from {{ requirements.length }} reviewed requirements
+          </p>
           <button
-            class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-md transition-colors"
+            class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium text-sm flex items-center gap-2 mx-auto transition-all shadow-lg shadow-blue-900/20"
             @click="handleGenerate"
           >
-            <RotateCcw class="w-3.5 h-3.5" />
-            Regenerate
-          </button>
-          <button
-            class="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-md transition-colors"
-            @click="handleExport"
-          >
-            <FileDown class="w-3.5 h-3.5" />
-            Export JSON
+            <Sparkles class="w-4 h-4" />
+            Generate Test Cases
           </button>
         </div>
       </div>
 
-      <!-- 用例列表 (可滚动) -->
-      <div class="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0 pr-0.5">
+      <!-- Loading Dialog -->
+      <Teleport to="body">
         <div
-          v-for="tc in testSuite.test_suite.test_cases"
-          :key="tc.case_id"
-          class="border border-zinc-800 rounded-md bg-zinc-900/20 overflow-hidden shrink-0"
+          v-if="isGenerating"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
         >
-          <!-- 用例头部 -->
           <div
-            class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-800/30 transition-colors"
-            @click="toggleCase(tc.case_id)"
+            class="bg-zinc-900 border border-zinc-800 rounded-xl px-8 py-6 flex flex-col items-center gap-4 shadow-2xl"
           >
-            <component
-              :is="expandedCases[tc.case_id] ? ChevronDown : ChevronRight"
-              class="w-3.5 h-3.5 text-zinc-500 shrink-0"
-            />
-            <span class="text-xs font-mono text-zinc-500 shrink-0">{{ tc.case_id }}</span>
-            <span class="text-xs font-medium text-zinc-200 flex-1 truncate">{{ tc.title }}</span>
-            <span class="text-[10px] text-zinc-600 shrink-0 hidden sm:block">{{
-              tc.test_type
-            }}</span>
-            <span
-              class="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider shrink-0"
-              :class="priorityBadgeClass(tc.priority)"
-            >
-              {{ tc.priority }}
-            </span>
-          </div>
-
-          <!-- 用例详情 -->
-          <div
-            v-if="expandedCases[tc.case_id]"
-            class="border-t border-zinc-800 px-3 py-2.5 space-y-3"
-          >
-            <!-- 风险 + 前置条件 -->
-            <div class="flex items-start gap-4 text-xs">
-              <div class="flex-1">
-                <span class="text-zinc-500">Preconditions</span>
-                <p class="text-zinc-400 mt-0.5 leading-relaxed">{{ tc.preconditions }}</p>
-              </div>
-              <div class="w-40 shrink-0">
-                <span class="text-zinc-500">Risk</span>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <div class="h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      class="h-full"
-                      :class="
-                        tc.risk_assessment.score >= 70
-                          ? 'bg-red-500'
-                          : tc.risk_assessment.score >= 40
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
-                      "
-                      :style="{ width: `${Math.min(tc.risk_assessment.score, 100)}%` }"
-                    ></div>
-                  </div>
-                  <span class="font-mono text-zinc-300 w-10 text-right">{{
-                    tc.risk_assessment.score
-                  }}</span>
-                </div>
-                <p class="text-zinc-500 mt-0.5 text-[11px]">{{ tc.risk_assessment.reason }}</p>
-              </div>
+            <Loader2 class="w-8 h-8 text-blue-400 animate-spin" />
+            <div class="text-center">
+              <p class="text-sm font-medium text-zinc-200">Generating Test Cases</p>
+              <p class="text-xs text-zinc-500 mt-1">
+                AI is creating test cases from your requirements...
+              </p>
             </div>
-
-            <!-- 步骤表格 -->
-            <table class="w-full text-left text-xs border border-zinc-800 rounded overflow-hidden">
-              <thead class="bg-zinc-900 text-zinc-500">
-                <tr>
-                  <th class="px-2.5 py-1.5 font-medium w-10">#</th>
-                  <th class="px-2.5 py-1.5 font-medium">Action</th>
-                  <th class="px-2.5 py-1.5 font-medium">Expected Result</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-zinc-800/50 text-zinc-400">
-                <tr
-                  v-for="step in tc.steps"
-                  :key="step.step_id"
-                  class="hover:bg-zinc-800/20 transition-colors"
-                >
-                  <td class="px-2.5 py-1.5 text-zinc-500 font-mono align-top">
-                    {{ step.step_id }}
-                  </td>
-                  <td class="px-2.5 py-1.5 whitespace-pre-wrap">{{ step.action }}</td>
-                  <td class="px-2.5 py-1.5 whitespace-pre-wrap">{{ step.expected_result }}</td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
+      </Teleport>
+
+      <!-- Error -->
+      <div
+        v-if="errorMessage"
+        class="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-md px-4 py-3 text-sm text-red-400 shrink-0"
+      >
+        <AlertCircle class="w-4 h-4 shrink-0" />
+        {{ errorMessage }}
+      </div>
+
+      <!-- 结果展示 -->
+      <template v-if="testSuite">
+        <!-- Suite 概览 + 操作 -->
+        <div
+          class="flex items-center justify-between shrink-0 bg-zinc-900 border border-zinc-800 rounded-lg px-5 py-3"
+        >
+          <div class="min-w-0">
+            <h2 class="text-base font-semibold text-zinc-100 truncate">
+              {{ testSuite.test_suite.suite_name }}
+            </h2>
+
+            <div class="flex items-center gap-3 mt-1 text-xs text-zinc-500">
+              <span>{{ totalCases }} cases</span>
+              <span class="flex items-center gap-1"
+                ><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span
+                >{{ priorityCounts.High }}</span
+              >
+              <span class="flex items-center gap-1"
+                ><span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span
+                >{{ priorityCounts.Medium }}</span
+              >
+              <span class="flex items-center gap-1"
+                ><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span
+                >{{ priorityCounts.Low }}</span
+              >
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button
+              class="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-3 py-1.5 rounded-md transition-colors"
+              @click="handleGenerate"
+            >
+              <RotateCcw class="w-3.5 h-3.5" />
+              Regenerate
+            </button>
+            <button
+              class="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-md transition-colors"
+              @click="handleExport"
+            >
+              <FileDown class="w-3.5 h-3.5" />
+              Export JSON
+            </button>
+          </div>
+        </div>
+
+        <!-- 用例列表 (可滚动) -->
+        <div class="flex-1 overflow-y-auto flex flex-col gap-2 min-h-0 pr-0.5">
+          <div
+            v-for="tc in testSuite.test_suite.test_cases"
+            :key="tc.case_id"
+            class="border border-zinc-800 rounded-md bg-zinc-900/20 overflow-hidden shrink-0"
+          >
+            <!-- 用例头部 -->
+            <div
+              class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-800/30 transition-colors"
+              @click="toggleCase(tc.case_id)"
+            >
+              <component
+                :is="expandedCases[tc.case_id] ? ChevronDown : ChevronRight"
+                class="w-3.5 h-3.5 text-zinc-500 shrink-0"
+              />
+              <span class="text-xs font-mono text-zinc-500 shrink-0">{{ tc.case_id }}</span>
+              <span class="text-xs font-medium text-zinc-200 flex-1 truncate">{{ tc.title }}</span>
+              <span class="text-[10px] text-zinc-600 shrink-0 hidden sm:block">{{
+                tc.test_type
+              }}</span>
+              <span
+                class="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider shrink-0"
+                :class="priorityBadgeClass(tc.priority)"
+              >
+                {{ tc.priority }}
+              </span>
+            </div>
+
+            <!-- 用例详情 -->
+            <div
+              v-if="expandedCases[tc.case_id]"
+              class="border-t border-zinc-800 px-3 py-2.5 space-y-3"
+            >
+              <!-- 风险 + 前置条件 -->
+              <div class="flex items-start gap-4 text-xs">
+                <div class="flex-1">
+                  <span class="text-zinc-500">Preconditions</span>
+                  <p class="text-zinc-400 mt-0.5 leading-relaxed">{{ tc.preconditions }}</p>
+                </div>
+                <div class="w-40 shrink-0">
+                  <span class="text-zinc-500">Risk</span>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <div class="h-1.5 flex-1 bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        class="h-full"
+                        :class="
+                          tc.risk_assessment.score >= 70
+                            ? 'bg-red-500'
+                            : tc.risk_assessment.score >= 40
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
+                        "
+                        :style="{ width: `${Math.min(tc.risk_assessment.score, 100)}%` }"
+                      ></div>
+                    </div>
+                    <span class="font-mono text-zinc-300 w-10 text-right">{{
+                      tc.risk_assessment.score
+                    }}</span>
+                  </div>
+                  <p class="text-zinc-500 mt-0.5 text-[11px]">{{ tc.risk_assessment.reason }}</p>
+                </div>
+              </div>
+
+              <!-- 步骤表格 -->
+              <table
+                class="w-full text-left text-xs border border-zinc-800 rounded overflow-hidden"
+              >
+                <thead class="bg-zinc-900 text-zinc-500">
+                  <tr>
+                    <th class="px-2.5 py-1.5 font-medium w-10">#</th>
+                    <th class="px-2.5 py-1.5 font-medium">Action</th>
+                    <th class="px-2.5 py-1.5 font-medium">Expected Result</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800/50 text-zinc-400">
+                  <tr
+                    v-for="step in tc.steps"
+                    :key="step.step_id"
+                    class="hover:bg-zinc-800/20 transition-colors"
+                  >
+                    <td class="px-2.5 py-1.5 text-zinc-500 font-mono align-top">
+                      {{ step.step_id }}
+                    </td>
+                    <td class="px-2.5 py-1.5 whitespace-pre-wrap">{{ step.action }}</td>
+                    <td class="px-2.5 py-1.5 whitespace-pre-wrap">{{ step.expected_result }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 空状态 -->
+      <div
+        v-if="!testSuite && !isGenerating && requirements.length === 0"
+        class="flex-1 flex flex-col items-center justify-center gap-4 text-zinc-600"
+      >
+        <FolderTree class="w-12 h-12 opacity-30" />
+        <p class="text-sm font-medium text-zinc-400">No requirements to generate test cases from</p>
       </div>
     </template>
 
-    <!-- 空状态 -->
-    <div
-      v-if="!testSuite && !isGenerating && requirements.length === 0"
-      class="flex-1 flex items-center justify-center text-zinc-600"
-    >
-      <div class="text-center">
-        <CheckCircle2 class="w-12 h-12 mx-auto mb-3 opacity-50" />
-        <p class="text-sm">No requirements to generate test cases from.</p>
-      </div>
-    </div>
+    <!-- Tab: State Modeling -->
+    <Step4StateModel v-show="activeTab === 'stateModel'" :requirements="requirements" />
   </div>
 </template>
