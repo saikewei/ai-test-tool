@@ -122,6 +122,38 @@ export function validateRequirements(raw: unknown): ValidationResult {
   return { valid: true, data: raw as Requirement[] }
 }
 
+// ---- State Model 类型 ----
+
+export interface StateTestCase {
+  case_id: string
+  title: string
+  priority: 'High' | 'Medium' | 'Low'
+  criterion: string
+  path: string[]
+  risk_assessment: { score: number; reason: string }
+  preconditions: string
+  test_type: string
+  steps: TestStep[]
+}
+
+export interface StateModelResult {
+  model: {
+    title: string
+    initial_state: string
+    final_states: string[]
+    states: { id: string; name: string; description: string }[]
+    transitions: { from_state: string; to_state: string; event: string; guard: string; action: string }[]
+  }
+  dotSource: string
+  testCases: StateTestCase[]
+  coverage: {
+    totalStates: number
+    totalTransitions: number
+    allStatesCases: number
+    allTransitionsCases: number
+  }
+}
+
 // ---- 测试用例类型 ----
 
 export interface TestStep {

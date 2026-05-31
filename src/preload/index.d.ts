@@ -25,6 +25,7 @@ declare global {
       readConfig: () => Promise<AppConfigData | null>
       writeConfig: (data: LlmConfigData) => Promise<void>
       reloadConfig: () => Promise<void>
+      modelStates: (requirementText: string) => Promise<unknown>
     }
   }
 }
