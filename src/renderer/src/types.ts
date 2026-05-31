@@ -173,6 +173,8 @@ export interface TestCase {
   preconditions: string
   test_type: string
   steps: TestStep[]
+  redundant?: boolean
+  redundant_reason?: string
 }
 
 export interface TestSuite {

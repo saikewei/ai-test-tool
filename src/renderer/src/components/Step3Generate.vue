@@ -9,7 +9,11 @@ import {
   ChevronRight,
   AlertCircle,
   FolderTree,
-  GitBranch
+  GitBranch,
+  Wand,
+  ArrowUpDown,
+  X,
+  Check
 } from 'lucide-vue-next'
 import { type Requirement, type GeneratedTestSuite, validateTestSuite } from '../types'
 import Step4StateModel from './Step4StateModel.vue'
@@ -121,6 +125,151 @@ const handleExport = async (): Promise<void> => {
   const json = JSON.stringify(testSuite.value, null, 2)
   const name = testSuite.value.test_suite.suite_name.replace(/\s+/g, '_') + '.json'
   await window.api.saveFile(json, name)
+}
+
+// ---- Oracle Generation ----
+
+const oracleLoading = ref<Record<string, boolean>>({})
+const testDataInputs = ref<Record<string, string>>({})
+const oracleResults = ref<Record<string, string>>({})
+
+const ORACLE_PROMPT = `
+You are an expert QA tester. Your task is to synthesize the expected result for a specific test case, given concrete test input data provided by the user.
+
+You will receive:
+1. The original requirement context
+2. A test case (title, preconditions, test_type, steps with actions)
+3. Specific test data values (e.g. input field values) provided by the user
+
+Based on the requirement logic and the given test inputs, determine what the correct/expected outcome should be. Consider edge cases, business rules, and validation logic from the requirements. Output a clear, verifiable expected result.
+
+Output ONLY a plain text expected result description. No JSON, no markdown.
+`
+
+async function generateOracle(caseId: string): Promise<void> {
+  if (!testSuite.value) return
+  const tc = testSuite.value.test_suite.test_cases.find((c) => c.case_id === caseId)
+  if (!tc) return
+  const testData = testDataInputs.value[caseId]?.trim()
+  if (!testData) return
+
+  oracleLoading.value = { ...oracleLoading.value, [caseId]: true }
+  oracleResults.value = { ...oracleResults.value, [caseId]: '' }
+  try {
+    const context = props.requirements
+      .map((r) => `[${r.requirement_id}] ${r.original_text}`)
+      .join('\n')
+    const userPrompt = [
+      '### Requirement Context',
+      context,
+      '',
+      '### Test Case',
+      `Title: ${tc.title}`,
+      `Preconditions: ${tc.preconditions}`,
+      `Type: ${tc.test_type}`,
+      '',
+      '### Steps',
+      ...tc.steps.map((s) => `${s.step_id}. ${s.action}`),
+      '',
+      '### Test Data (user-provided)',
+      testData,
+      '',
+      'Based on the above, what is the expected result?'
+    ].join('\n')
+
+    const response = await window.api.requestLlm(userPrompt, ORACLE_PROMPT, false)
+    oracleResults.value = { ...oracleResults.value, [caseId]: response.trim() }
+  } catch (err) {
+    console.error('Oracle generation failed:', err)
+    oracleResults.value = {
+      ...oracleResults.value,
+      [caseId]: 'Generation failed. Please try again.'
+    }
+  } finally {
+    oracleLoading.value = { ...oracleLoading.value, [caseId]: false }
+  }
+}
+
+// ---- Suite Optimization ----
+
+const isOptimizing = ref(false)
+const showOptimizeModal = ref(false)
+const optimizeResult = ref<GeneratedTestSuite | null>(null)
+
+const OPTIMIZE_PROMPT = `
+You are a test architect optimizing a test suite for maximum coverage efficiency. You receive:
+- The original requirements (with coverage_items and test_strategies per requirement)
+- The generated test suite to optimize
+
+Your task:
+
+1. **Coverage Mapping**: For each test case, identify which coverage item(s) and test strategy it targets.
+
+2. **Risk Prioritization**: Reorder test cases by risk (High > Medium > Low, then risk score descending within each tier).
+
+3. **Redundancy Detection**: Flag test cases that cover the SAME coverage item with substantially similar inputs and expected outcomes. Mark duplicates with "redundant": true and "redundant_reason" explaining which coverage point is duplicated and by which other case_id.
+
+4. **Coverage Gap Check**: If any coverage item from the requirements has NO test case targeting it, note this in the suite description field.
+
+5. **Merge Suggestions**: If two or more test cases could be combined into one more efficient case (covering multiple coverage points in a single flow), mark the secondary ones as redundant and suggest the merged case_id.
+
+Output ONLY valid JSON with the same structure as input (test_suite with suite_name, description, test_cases). All original test cases MUST be present (just reordered + marked). No markdown.
+`
+
+async function handleOptimize(): Promise<void> {
+  if (!testSuite.value) return
+  isOptimizing.value = true
+  showOptimizeModal.value = true
+  optimizeResult.value = null
+
+  try {
+    const requirementsJson = JSON.stringify(props.requirements, null, 2)
+    const suiteJson = JSON.stringify(testSuite.value, null, 2)
+    const userPrompt = `Requirements:\n${requirementsJson}\n\nTest Suite to optimize:\n${suiteJson}`
+    const response = await window.api.requestLlm(userPrompt, OPTIMIZE_PROMPT, false)
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(response)
+    } catch {
+      console.error('Optimize: invalid JSON')
+      return
+    }
+
+    const result = validateTestSuite(parsed)
+    if (result.valid) {
+      optimizeResult.value = parsed as GeneratedTestSuite
+    }
+  } catch (err) {
+    console.error('Optimization failed:', err)
+  } finally {
+    isOptimizing.value = false
+  }
+}
+
+function applyOptimization(): void {
+  if (!optimizeResult.value) return
+  // 过滤掉标记为 redundant 的用例
+  const filtered = optimizeResult.value.test_suite.test_cases.filter((tc) => !tc.redundant)
+  testSuite.value = {
+    test_suite: {
+      ...optimizeResult.value.test_suite,
+      test_cases: filtered
+    }
+  }
+  showOptimizeModal.value = false
+  optimizeResult.value = null
+}
+
+function cancelOptimization(): void {
+  showOptimizeModal.value = false
+  optimizeResult.value = null
+}
+
+async function exportOptimized(): Promise<void> {
+  if (!optimizeResult.value) return
+  const json = JSON.stringify(optimizeResult.value, null, 2)
+  await window.api.saveFile(json, 'optimized_suite.json')
 }
 
 // ---- 折叠 ----
@@ -282,6 +431,13 @@ const priorityBadgeClass = (p: string): string => {
               Regenerate
             </button>
             <button
+              class="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-3 py-1.5 rounded-md transition-colors"
+              @click="handleOptimize"
+            >
+              <ArrowUpDown class="w-3.5 h-3.5" />
+              Optimize
+            </button>
+            <button
               class="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-md transition-colors"
               @click="handleExport"
             >
@@ -380,6 +536,44 @@ const priorityBadgeClass = (p: string): string => {
                   </tr>
                 </tbody>
               </table>
+
+              <!-- Test Oracle -->
+              <div class="border-t border-zinc-800/50 pt-3 space-y-2">
+                <div class="flex items-center gap-1.5">
+                  <Wand class="w-3.5 h-3.5 text-purple-400" />
+                  <span class="text-xs font-medium text-zinc-400">Test Oracle</span>
+                  <span class="text-[10px] text-zinc-600"
+                    >— provide test data, get expected result</span
+                  >
+                </div>
+                <textarea
+                  v-model="testDataInputs[tc.case_id]"
+                  class="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-xs text-zinc-300 font-mono resize-none outline-none focus:border-purple-500/50 transition-colors placeholder:text-zinc-700"
+                  rows="3"
+                  placeholder='Provide specific test data, e.g.:&#10;{ "username": "admin", "password": "P@ss123!", "age": 17 }'
+                ></textarea>
+                <div class="flex justify-between items-center">
+                  <button
+                    class="flex items-center gap-1.5 text-xs text-purple-400 hover:text-purple-300 transition-colors disabled:opacity-50"
+                    :disabled="
+                      oracleLoading[tc.case_id] || !(testDataInputs[tc.case_id] || '').trim()
+                    "
+                    @click.stop="generateOracle(tc.case_id)"
+                  >
+                    <Loader2 v-if="oracleLoading[tc.case_id]" class="w-3 h-3 animate-spin" />
+                    <Wand v-else class="w-3 h-3" />
+                    {{
+                      oracleLoading[tc.case_id] ? 'Synthesizing...' : 'Synthesize Expected Result'
+                    }}
+                  </button>
+                </div>
+                <div
+                  v-if="oracleResults[tc.case_id]"
+                  class="bg-purple-500/5 border border-purple-500/20 rounded-md px-3 py-2 text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap"
+                >
+                  {{ oracleResults[tc.case_id] }}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -394,6 +588,136 @@ const priorityBadgeClass = (p: string): string => {
         <p class="text-sm font-medium text-zinc-400">No requirements to generate test cases from</p>
       </div>
     </template>
+
+    <!-- Optimize Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showOptimizeModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      >
+        <div
+          class="bg-zinc-900 border border-zinc-800 rounded-xl w-[560px] max-h-[85vh] flex flex-col shadow-2xl"
+        >
+          <!-- Header -->
+          <div
+            class="flex items-center justify-between px-5 py-4 border-b border-zinc-800 shrink-0"
+          >
+            <div>
+              <h3 class="text-sm font-semibold text-zinc-200">Suite Optimization</h3>
+              <p class="text-xs text-zinc-500 mt-0.5">
+                Risk-prioritized reorder & redundancy analysis
+              </p>
+            </div>
+            <button
+              class="text-zinc-500 hover:text-zinc-300 transition-colors"
+              @click="cancelOptimization"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <!-- Loading -->
+          <div v-if="isOptimizing" class="flex items-center justify-center py-16">
+            <Loader2 class="w-5 h-5 text-amber-400 animate-spin" />
+            <span class="ml-2 text-sm text-zinc-400">Analyzing suite...</span>
+          </div>
+
+          <!-- Results -->
+          <div
+            v-else-if="optimizeResult"
+            class="flex-1 overflow-y-auto px-5 py-4 space-y-3 text-xs"
+          >
+            <!-- Before/After -->
+            <div class="flex items-center gap-4 bg-zinc-800/50 rounded-lg px-4 py-3">
+              <div>
+                <span class="text-zinc-500">Original</span>
+                <span class="font-mono text-zinc-200 ml-2"
+                  >{{ testSuite!.test_suite.test_cases.length }} cases</span
+                >
+              </div>
+              <span class="text-zinc-600">→</span>
+              <div>
+                <span class="text-zinc-500">Optimized</span>
+                <span class="font-mono text-amber-400 ml-2"
+                  >{{
+                    optimizeResult.test_suite.test_cases.filter((tc) => !tc.redundant).length
+                  }}
+                  cases</span
+                >
+                <span class="text-zinc-500 text-[10px] ml-1"
+                  >({{ optimizeResult.test_suite.test_cases.length }} total)</span
+                >
+              </div>
+              <div class="ml-auto">
+                <span
+                  v-if="optimizeResult.test_suite.test_cases.some((tc) => tc.redundant)"
+                  class="text-green-400 text-xs"
+                >
+                  {{ optimizeResult.test_suite.test_cases.filter((tc) => tc.redundant).length }}
+                  redundant marked
+                </span>
+                <span v-else class="text-zinc-500 text-xs">reordered only</span>
+              </div>
+            </div>
+
+            <!-- Optimized List -->
+            <div class="flex flex-col gap-1.5">
+              <div
+                v-for="(tc, idx) in optimizeResult.test_suite.test_cases"
+                :key="tc.case_id"
+                class="flex items-center gap-2 bg-zinc-800/30 rounded-md px-3 py-2"
+              >
+                <span class="text-zinc-600 font-mono w-6 text-right">{{ idx + 1 }}</span>
+                <span
+                  class="px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wider shrink-0"
+                  :class="priorityBadgeClass(tc.priority)"
+                >
+                  {{ tc.priority }}
+                </span>
+                <span class="text-xs text-zinc-300 truncate flex-1">{{ tc.title }}</span>
+                <span class="text-zinc-500 font-mono text-[11px]"
+                  >Risk {{ tc.risk_assessment.score }}</span
+                >
+                <span
+                  v-if="tc.redundant"
+                  class="px-1.5 py-0.5 rounded text-[10px] bg-red-500/10 text-red-400 border border-red-500/20"
+                  :title="tc.redundant_reason"
+                  >Redundant</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div
+            class="flex items-center justify-end gap-3 px-5 py-4 border-t border-zinc-800 shrink-0"
+          >
+            <button
+              class="px-4 py-2 text-xs text-zinc-400 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors"
+              @click="cancelOptimization"
+            >
+              Cancel
+            </button>
+            <button
+              class="px-4 py-2 text-xs text-white bg-amber-600 hover:bg-amber-500 rounded-md flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              :disabled="!optimizeResult"
+              @click="applyOptimization"
+            >
+              <Check class="w-3.5 h-3.5" />
+              Apply Optimization
+            </button>
+            <button
+              v-if="optimizeResult"
+              class="px-4 py-2 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 rounded-md flex items-center gap-1.5 transition-colors"
+              @click="exportOptimized"
+            >
+              <FileDown class="w-3.5 h-3.5" />
+              Export
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Tab: State Modeling -->
     <Step4StateModel v-show="activeTab === 'stateModel'" :requirements="requirements" />
