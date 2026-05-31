@@ -6,4 +6,4 @@ out
 *.log*
 .vscode
 *.yaml
-fr4-whitebox/venv/
+.claude
