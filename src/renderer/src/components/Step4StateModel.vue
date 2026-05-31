@@ -9,7 +9,10 @@ import {
   FileDown,
   ChevronDown,
   ChevronRight,
-  Check
+  Check,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw
 } from 'lucide-vue-next'
 import type { Requirement, StateModelResult, StateTestCase } from '../types'
 
@@ -25,6 +28,83 @@ const svgContent = ref('')
 const activeTab = ref<'diagram' | 'cases' | 'export'>('diagram')
 const expandedCases = ref<Record<string, boolean>>({})
 const highlightPath = ref<string[]>([])
+
+// ── 缩放 & 拖拽 ──
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 5
+const zoom = ref(1)
+const panX = ref(0)
+const panY = ref(0)
+const isPanning = ref(false)
+const panStart = ref({ x: 0, y: 0, px: 0, py: 0 })
+const diagramContainer = ref<HTMLElement | null>(null)
+
+function clampZoom(z: number): number {
+  return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(z * 100) / 100))
+}
+
+function setZoom(newZoom: number, mx: number, my: number): void {
+  const old = zoom.value
+  const z = clampZoom(newZoom)
+  zoom.value = z
+  // panX_new = panX_old + mx * (1/z - 1/old)
+  panX.value = panX.value + mx * (1 / z - 1 / old)
+  panY.value = panY.value + my * (1 / z - 1 / old)
+}
+
+function onWheel(e: WheelEvent): void {
+  e.preventDefault()
+  const rect = diagramContainer.value?.getBoundingClientRect()
+  if (!rect) return
+
+  const mx = e.clientX - rect.left
+  const my = e.clientY - rect.top
+  // 根据 delta 幅度自适应步长：触控板捏合 delta 小(~10)，鼠标滚轮 delta 大(~100)
+  const step = Math.abs(e.deltaY) * 0.025
+  const newZoom = clampZoom(zoom.value * (e.deltaY > 0 ? 1 - step : 1 + step))
+  setZoom(newZoom, mx, my)
+}
+
+function zoomBy(step: number): void {
+  const rect = diagramContainer.value?.getBoundingClientRect()
+  const mx = rect ? rect.width / 2 : 0
+  const my = rect ? rect.height / 2 : 0
+  setZoom(zoom.value + step, mx, my)
+}
+
+function onPanStart(e: MouseEvent): void {
+  isPanning.value = true
+  panStart.value = { x: e.clientX, y: e.clientY, px: panX.value, py: panY.value }
+}
+
+function onPanMove(e: MouseEvent): void {
+  if (!isPanning.value) return
+  panX.value = panStart.value.px + (e.clientX - panStart.value.x) / zoom.value
+  panY.value = panStart.value.py + (e.clientY - panStart.value.y) / zoom.value
+}
+
+function onPanEnd(): void {
+  isPanning.value = false
+}
+
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key === '=' || e.key === '+') {
+    e.preventDefault()
+    zoomBy(0.5)
+  } else if (e.key === '-') {
+    e.preventDefault()
+    zoomBy(-0.5)
+  } else if (e.key === '0') {
+    e.preventDefault()
+    resetZoom()
+  }
+}
+
+function resetZoom(): void {
+  zoom.value = 1
+  panX.value = 0
+  panY.value = 0
+}
 
 const requirementText = computed(() =>
   props.requirements.map((r) => `[${r.requirement_id}] ${r.original_text}`).join('\n\n')
@@ -235,11 +315,57 @@ function criterionBadge(c: string): string {
       <div class="flex-1 min-h-0 flex flex-col">
         <!-- Diagram -->
         <div v-if="activeTab === 'diagram'" class="flex-1 min-h-0 flex overflow-hidden">
-          <!-- eslint-disable-next-line vue/no-v-html -->
           <div
-            class="flex-1 overflow-auto p-4 flex items-start justify-center"
-            v-html="svgContent"
-          ></div>
+            ref="diagramContainer"
+            class="flex-1 overflow-hidden relative"
+            :class="isPanning ? 'cursor-grabbing' : 'cursor-grab'"
+            tabindex="0"
+            @wheel.prevent="onWheel"
+            @mousedown.left="onPanStart"
+            @mousemove="onPanMove"
+            @mouseup="onPanEnd"
+            @mouseleave="onPanEnd"
+            @keydown="onKeydown"
+          >
+            <!-- SVG 内容（可缩放/拖拽） -->
+            <!-- eslint-disable-next-line vue/no-v-html -->
+            <div
+              class="absolute top-0 left-0 p-4"
+              style="transform-origin: 0 0"
+              :style="{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }"
+              v-html="svgContent"
+            ></div>
+
+            <!-- 缩放工具栏 -->
+            <div
+              class="absolute bottom-3 right-3 flex items-center gap-1 bg-zinc-900/90 border border-zinc-700 rounded-lg px-2 py-1.5 shadow-lg"
+            >
+              <button
+                class="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+                title="Zoom out"
+                @click="zoomBy(-0.5)"
+              >
+                <ZoomOut class="w-3.5 h-3.5" />
+              </button>
+              <span class="text-xs text-zinc-400 font-mono w-12 text-center select-none"
+                >{{ Math.round(zoom * 100) }}%</span
+              >
+              <button
+                class="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors"
+                title="Zoom in"
+                @click="zoomBy(0.5)"
+              >
+                <ZoomIn class="w-3.5 h-3.5" />
+              </button>
+              <button
+                class="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700 transition-colors ml-1"
+                title="Reset"
+                @click="resetZoom"
+              >
+                <RotateCcw class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
           <div
             class="w-64 shrink-0 border-l border-zinc-800 overflow-y-auto p-3 flex flex-col gap-1.5"
           >
