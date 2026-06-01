@@ -208,23 +208,23 @@ function buildTestCase(
 
   steps.push({
     step_id: 1,
-    action: `确认系统处于初始状态：${stateName(model, path[0])}`,
-    expected_result: `当前状态为【${stateName(model, path[0])}】`
+    action: `Verify system is in initial state: ${stateName(model, path[0])}`,
+    expected_result: `Current state is [${stateName(model, path[0])}]`
   })
 
   for (let i = 0; i < path.length - 1; i++) {
     const u = path[i]
     const v = path[i + 1]
     const t = model.transitions.find((t) => t.from_state === u && t.to_state === v)
-    const event = t?.event ?? '触发事件'
+    const event = t?.event ?? 'trigger event'
     const guard = t?.guard ?? ''
     const action = t?.action ?? ''
 
-    let actionText = `执行：${event}`
-    if (guard) actionText += `（前置条件：${guard}）`
+    let actionText = `Execute: ${event}`
+    if (guard) actionText += ` (guard: ${guard})`
 
-    let expectedText = `系统从【${stateName(model, u)}】转换到【${stateName(model, v)}】`
-    if (action) expectedText += `，执行动作：${action}`
+    let expectedText = `System transitions from [${stateName(model, u)}] to [${stateName(model, v)}]`
+    if (action) expectedText += `, action: ${action}`
 
     steps.push({
       step_id: i + 2,
@@ -247,9 +247,9 @@ function buildTestCase(
     path,
     risk_assessment: {
       score: criterion === 'All-Transitions' ? 9 : 7,
-      reason: `状态转换测试（${criterion}）覆盖转换：${coveredTransitions}`
+      reason: `State transition test (${criterion}) covering transitions: ${coveredTransitions}`
     },
-    preconditions: `系统处于初始状态【${stateName(model, path[0])}】，测试环境就绪`,
+    preconditions: `System is in initial state [${stateName(model, path[0])}], test environment ready`,
     test_type: 'White-Box / State Transition (ISO 29119-4)',
     steps
   }
