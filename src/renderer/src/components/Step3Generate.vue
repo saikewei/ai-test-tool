@@ -13,12 +13,14 @@ import {
   Wand,
   ArrowUpDown,
   X,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-vue-next'
 import { type Requirement, type GeneratedTestSuite, validateTestSuite } from '../types'
 import Step4StateModel from './Step4StateModel.vue'
 
 const props = defineProps<{ requirements: Requirement[] }>()
+const emit = defineEmits<{ back: [] }>()
 
 const activeTab = ref<'cases' | 'stateModel'>('cases')
 
@@ -314,7 +316,17 @@ const priorityBadgeClass = (p: string): string => {
   <div class="h-full w-full max-w-5xl mx-auto p-8 flex flex-col gap-4 min-h-0">
     <!-- 标题 + Tab 栏 -->
     <div class="flex items-center justify-between shrink-0">
-      <h1 class="text-2xl font-semibold text-zinc-100">Generate</h1>
+      <div class="flex items-center gap-3">
+        <button
+          class="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+          title="Back to Review"
+          @click="emit('back')"
+        >
+          <ArrowLeft class="w-4 h-4" />
+          Back
+        </button>
+        <h1 class="text-2xl font-semibold text-zinc-100">Generate</h1>
+      </div>
       <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-lg p-0.5">
         <button
           class="flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors"

@@ -101,7 +101,11 @@ const resetAll = (): void => {
         :requirements="requirementsList"
         @confirm="handleReviewComplete"
       />
-      <Step3Generate v-if="currentStep === 3" :requirements="reviewedRequirements" />
+      <Step3Generate
+        v-if="currentStep === 3"
+        :requirements="reviewedRequirements"
+        @back="currentStep = 2"
+      />
     </main>
 
     <SettingsDialog v-if="showSettings" @close="showSettings = false" />
