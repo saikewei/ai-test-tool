@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { reactive, computed, ref } from 'vue'
-import { ShieldAlert, Plus, X, Check, AlertTriangle } from 'lucide-vue-next'
+import { ShieldAlert, Plus, X, Check, AlertTriangle, Trash2 } from 'lucide-vue-next'
 import type { Requirement, TestStrategy } from '../types'
 
 // ---- Step2Review 内部类型（在共享类型基础上扩展 _tagInput） ----
@@ -86,6 +86,12 @@ const addCoverageItem = (): void => {
   })
 }
 
+const removeCoverageItem = (id: string): void => {
+  if (!selectedReq.value || selectedReq.value.coverage_items.length <= 1) return
+  const idx = selectedReq.value.coverage_items.findIndex((c) => c.id === id)
+  if (idx !== -1) selectedReq.value.coverage_items.splice(idx, 1)
+}
+
 // ---- Test Strategies ----
 
 const addStrategy = (): void => {
@@ -97,6 +103,12 @@ const addStrategy = (): void => {
     proposed_test_points: [],
     _tagInput: ''
   })
+}
+
+const removeStrategy = (id: string): void => {
+  if (!selectedReq.value || selectedReq.value.test_strategies.length <= 1) return
+  const idx = selectedReq.value.test_strategies.findIndex((s) => s.id === id)
+  if (idx !== -1) selectedReq.value.test_strategies.splice(idx, 1)
 }
 
 const handleTagKeydown = (strategy: TestStrategyWithTag): void => {
@@ -279,6 +291,7 @@ const priorityBadgeClass = (p: string): string => {
                     <th class="px-4 py-3 font-medium">Field Name</th>
                     <th class="px-4 py-3 font-medium">Valid Range</th>
                     <th class="px-4 py-3 font-medium">Expected Action</th>
+                    <th class="px-4 py-3 font-medium w-10"></th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-800/50 text-zinc-300 font-mono text-xs">
@@ -309,6 +322,16 @@ const priorityBadgeClass = (p: string): string => {
                         class="w-full bg-transparent border border-transparent hover:border-zinc-700 focus:border-blue-500 focus:bg-zinc-900 rounded px-2 py-1 outline-none"
                       />
                     </td>
+                    <td class="px-2 py-2 text-center">
+                      <button
+                        class="text-zinc-600 hover:text-red-400 transition-colors"
+                        :disabled="selectedReq.coverage_items.length <= 1"
+                        :title="selectedReq.coverage_items.length <= 1 ? 'Cannot delete last item' : 'Delete'"
+                        @click="removeCoverageItem(item.id)"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -331,8 +354,16 @@ const priorityBadgeClass = (p: string): string => {
               <div
                 v-for="strategy in selectedReq.test_strategies"
                 :key="strategy.id"
-                class="border border-zinc-800 rounded-md p-4 bg-zinc-900/20 hover:border-zinc-700 transition-colors"
+                class="border border-zinc-800 rounded-md p-4 bg-zinc-900/20 hover:border-zinc-700 transition-colors relative"
               >
+                <button
+                  class="absolute top-2 right-2 text-zinc-600 hover:text-red-400 transition-colors"
+                  :disabled="selectedReq.test_strategies.length <= 1"
+                  :title="selectedReq.test_strategies.length <= 1 ? 'Cannot delete last strategy' : 'Delete'"
+                  @click="removeStrategy(strategy.id)"
+                >
+                  <Trash2 class="w-4 h-4" />
+                </button>
                 <div class="flex flex-wrap md:flex-nowrap gap-4 items-start">
                   <div class="w-32 shrink-0">
                     <label class="block text-xs text-zinc-500 mb-1">Target Item ID</label>
